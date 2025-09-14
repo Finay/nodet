@@ -1,123 +1,313 @@
 <!doctype html>
-<div id="container"></div>
-<script type="module">
-    import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+<html>
+    <head>
+        <style>
+            :root {
+                --bgdark: #ede8d7;
+                --bglight: #fcf6e5;
+                --borderdark: #96a0a1;
+                --borderlight: #e2e1de;
+                --blue: #4689cc;
+                --green: #8d9b31;
+                --red: #cb4239;
+                --turq: #519f98;
+                --text: #6a7b82;
+            }
 
-    // Set data
-    let data = {
-        nodes: [
-            { id: "Idea 1", group: "A" },
-            { id: "Idea 2", group: "B" },
-            { id: "Idea 3", group: "B" },
-            { id: "Idea 4", group: "B" },
-            { id: "Idea 5", group: "C" },
-        ],
-        links: [
-            { source: "Idea 1", target: "Idea 2" },
-            { source: "Idea 1", target: "Idea 3" },
-            { source: "Idea 1", target: "Idea 4" },
-            { source: "Idea 4", target: "Idea 5" },
-            { source: "Idea 5", target: "Idea 1" },
-        ],
-    };
+            body,
+            html {
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+            #container {
+                display: flex;
+            }
+            #graphview {
+                width: 50vw;
+                height: 100vh;
+                background-color: var(--bglight);
+                border-right: var(--borderdark) 1px solid;
+            }
+            #textviews {
+                width: 50vw;
+                height: 100vh;
+            }
+            #editorview {
+                width: 100%;
+                height: 50%;
+                background-color: var(--bglight);
+                border-left: var(--borderdark) 1px solid;
+                border-bottom: var(--borderdark) 1px solid;
+            }
+            #navigatorview {
+                width: 100%;
+                height: 50%;
+                background-color: var(--bglight);
+                border-left: var(--borderdark) 1px solid;
+                border-top: var(--borderdark) 1px solid;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div id="graphview"></div>
+            <div id="textviews">
+                <div id="editorview"></div>
+                <div id="navigatorview"></div>
+            </div>
+        </div>
+        <script type="module">
+            import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-    // Specify the dimensions of the chart.
-    const width = 928;
-    const height = 680;
+            // Set data
+            let data = {
+                nodes: [
+                    { id: "cf0b19f251f438", title: "Idea 1", group: "A" }, // Math.random().toString(16).slice(2)
+                    { id: "1c0e0c501d58f8", title: "Idea 2", group: "B" },
+                ],
+                links: [{ source: "cf0b19f251f438", target: "1c0e0c501d58f8" }],
+            };
 
-    // Specify the color scale.
-    const color = d3.scaleOrdinal(d3.schemeCategory10);
+            // Specify the dimensions of the chart.
+            const width = graphview.offsetWidth;
+            const height = graphview.offsetHeight;
 
-    // The force simulation mutates links and nodes, so create a copy
-    // so that re-evaluating this cell produces the same result.
-    const links = data.links.map((d) => ({ ...d }));
-    console.log(links);
-    const nodes = data.nodes.map((d) => ({ ...d }));
-    console.log(nodes);
+            // Specify the color scale.
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-    // Create a simulation with several forces.
-    const simulation = d3
-        .forceSimulation(nodes)
-        .force(
-            "link",
-            d3.forceLink(links).id((d) => d.id),
-        )
-        .force("charge", d3.forceManyBody())
-        .force("x", d3.forceX())
-        .force("y", d3.forceY());
+            // The force simulation mutates links and nodes, so create a copy
+            // so that re-evaluating this cell produces the same result.
+            const links = data.links.map((d) => ({ ...d }));
+            const nodes = data.nodes.map((d) => ({ ...d }));
 
-    // Create the SVG container.
-    const svg = d3
-        .create("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("viewBox", [-width / 2, -height / 2, width, height])
-        .attr("style", "max-width: 100%; height: auto;");
+            // Create a simulation with several forces.
+            const simulation = d3
+                .forceSimulation(nodes)
+                .force(
+                    "link",
+                    d3
+                        .forceLink(links)
+                        .id((d) => d.id)
+                        .strength((d) => 1),
+                )
+                .force("charge", d3.forceManyBody());
+            // .force("x", d3.forceX())
+            // .force("y", d3.forceY());
 
-    // Add a line for each link, and a circle for each node.
-    const link = svg
-        .append("g")
-        .attr("stroke", "#999")
-        .attr("stroke-opacity", 0.6)
-        .selectAll("line")
-        .data(links)
-        .join("line")
-        .attr("stroke-width", (d) => Math.sqrt(d.value));
+            // Create the SVG container.
+            const svg = d3
+                .create("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [-width / 2, -height / 2, width, height])
+                .attr("style", "max-width: 100%; height: auto;");
 
-    console.log(link);
+            // Add zoom behavior to svg
+            svg.call(
+                d3
+                    .zoom()
+                    .extent([
+                        [0, 0],
+                        [width, height],
+                    ])
+                    .scaleExtent([1, 8])
+                    .on("zoom", zoomed),
+            );
 
-    const node = svg
-        .append("g")
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 1.5)
-        .selectAll("circle")
-        .data(nodes)
-        .join("circle")
-        .attr("r", 5)
-        .attr("fill", (d) => color(d.group));
+            function zoomed({ transform }) {
+                link.attr("transform", transform);
+                node.attr("transform", transform);
+            }
 
-    node.append("title").text((d) => d.id);
+            // Control functions
+            let primarynodeid = "cf0b19f251f438";
+            let secondarynodeid = "1c0e0c501d58f8";
 
-    // Add a drag behavior.
-    node.call(
-        d3
-            .drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended),
-    );
+            function nodecolor(d) {
+                return d.id == primarynodeid ? "#000" : "#fff";
+            }
 
-    // Set the position attributes of links and nodes each time the simulation ticks.
-    simulation.on("tick", () => {
-        link.attr("x1", (d) => d.source.x)
-            .attr("y1", (d) => d.source.y)
-            .attr("x2", (d) => d.target.x)
-            .attr("y2", (d) => d.target.y);
+            function nodestrokeopacity(d) {
+                return d.id == primarynodeid ? 0.6 : 1;
+            }
 
-        node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-    });
+            function isselectedlink(d) {
+                return (
+                    (primarynodeid == d.source.id &&
+                        secondarynodeid == d.target.id) ||
+                    (primarynodeid == d.target.id &&
+                        secondarynodeid == d.source.id)
+                );
+            }
 
-    // Reheat the simulation when drag starts, and fix the subject position.
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
+            function linkcolor(d) {
+                return isselectedlink(d) ? "#000" : "#999";
+            }
 
-    // Update the subject (dragged node) position during drag.
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
+            function linkstrokewidth(d) {
+                return isselectedlink(d) ? 3 : 1;
+            }
 
-    // Restore the target alpha so the simulation cools after dragging ends.
-    // Unfix the subject position now that it’s no longer being dragged.
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-    }
+            function getneighbors(d) {
+                return link.data().reduce((neighbors, l) => {
+                    if (l.target.id === d) {
+                        neighbors.push(l.source.id);
+                    } else if (l.source.id === d) {
+                        neighbors.push(l.target.id);
+                    }
+                    return neighbors;
+                }, []);
+            }
 
-    // Append the SVG element.
-    container.append(svg.node());
-</script>
+            // Add a line for each link, and a circle for each node.
+            let link = svg
+                .append("g")
+                .selectAll("line")
+                .data(links)
+                .join("line")
+                .attr("stroke", (d) => linkcolor(d))
+                .attr("stroke-opacity", 0.6)
+                .attr("stroke-width", (d) => linkstrokewidth(d));
+
+            let node = svg
+                .append("g")
+                .selectAll("circle")
+                .data(nodes)
+                .join("circle")
+                .attr("r", 5)
+                .attr("stroke", (d) => nodecolor(d))
+                .attr("stroke-opacity", (d) => nodestrokeopacity(d))
+                .attr("stroke-width", 1.5)
+                .attr("fill", (d) => color(d.group));
+
+            node.append("title").text((d) => d.id); // NOTE: Title added here
+
+            // graphwalk
+            addEventListener("keydown", (event) => {
+                if (event.code == "Space") {
+                    const temp = primarynodeid;
+                    primarynodeid = secondarynodeid;
+                    secondarynodeid = temp;
+                } else if (event.code == "KeyJ") {
+                    const neighbors = getneighbors(primarynodeid);
+
+                    const index = neighbors.indexOf(secondarynodeid);
+                    if (index == -1) {
+                        secondarynodeid = neighbors[0];
+                    } else {
+                        secondarynodeid =
+                            neighbors[(index + 1) % neighbors.length];
+                    }
+                } else if (event.code == "KeyW") {
+                    const temp = primarynodeid;
+                    primarynodeid = secondarynodeid;
+                    secondarynodeid = temp;
+                    const neighbors = getneighbors(primarynodeid);
+
+                    const index = neighbors.indexOf(secondarynodeid);
+                    if (index == -1) {
+                        secondarynodeid = neighbors[0];
+                    } else {
+                        secondarynodeid =
+                            neighbors[(index + 1) % neighbors.length];
+                    }
+                } else if (event.code == "KeyI") {
+                    let newid = Math.random().toString(16).slice(2);
+                    let a = node.data();
+                    a.push({ id: newid, title: "", group: "D" }); // TODO fix group stuff?
+                    let b = link.data();
+                    b.push({ source: primarynodeid, target: newid });
+                    secondarynodeid = primarynodeid;
+                    primarynodeid = newid;
+
+                    simulation.nodes(a);
+                    simulation.force("link").links(b);
+                    simulation.alpha(1).restart();
+
+                    node = node
+                        .data(a, (d) => d.id)
+                        .join((enter) => enter.append("circle").attr("r", 5))
+                        .attr("fill", (d) => color(d.group));
+
+                    link = link
+                        .data(b, (d) => `${d.source.id}\t${d.target.id}`)
+                        .join("line");
+                } else {
+                    return;
+                }
+                node.attr("stroke", (d) => nodecolor(d)).attr(
+                    "stroke-opacity",
+                    (d) => nodestrokeopacity(d),
+                );
+                link.attr("stroke", (d) => linkcolor(d))
+                    .attr("stroke-width", (d) => linkstrokewidth(d))
+                    .attr("stroke-opacity", 0.6);
+            });
+
+            // Add a drag behavior.
+            node.call(
+                d3
+                    .drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended),
+            );
+
+            // Set the position attributes of links and nodes each time the simulation ticks.
+            simulation.on("tick", () => {
+                link.attr("x1", (d) => d.source.x)
+                    .attr("y1", (d) => d.source.y)
+                    .attr("x2", (d) => d.target.x)
+                    .attr("y2", (d) => d.target.y);
+
+                node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+            });
+
+            // Reheat the simulation when drag starts, and fix the subject position.
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            // Update the subject (dragged node) position during drag.
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            // Restore the target alpha so the simulation cools after dragging ends.
+            // Unfix the subject position now that it’s no longer being dragged.
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+
+            // Append the SVG element.
+            graphview.append(svg.node());
+
+            // Update graph with new data
+            function updategraph({ newnodes, newlinks }) {
+                const old = new Map(node.data().map((d) => [d.id, d]));
+                newnodes = newnodes.map((d) =>
+                    Object.assign(old.get(d.id) || {}, d),
+                );
+                newlinks = newlinks.map((d) => Object.assign({}, d));
+
+                simulation.nodes(newnodes);
+                simulation.force("link").links(newlinks);
+                simulation.alpha(1).restart();
+
+                node = node
+                    .data(newnodes, (d) => d.id)
+                    .join((enter) => enter.append("circle").attr("r", 8));
+
+                link = link
+                    .data(newlinks, (d) => `${d.source.id}\t${d.target.id}`)
+                    .join("line");
+            }
+        </script>
+    </body>
+</html>
