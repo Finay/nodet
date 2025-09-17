@@ -39,6 +39,43 @@
                 background-color: var(--bglight);
                 border-left: var(--borderdark) 1px solid;
                 border-bottom: var(--borderdark) 1px solid;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            #editorbar {
+                height: calc(8%);
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 5px;
+            }
+            #editortitlebox {
+                height: 12%;
+                width: 100%;
+                display: flex;
+                align-items: center;
+            }
+            #editortitle {
+                margin-left: 20px;
+                margin-right: 20px;
+                width: 100%;
+                font-size: 4vh;
+            }
+            #editorcontentbox {
+                height: 80%;
+                width: 100%;
+            }
+            #editorcontent {
+                display: block;
+                height: calc(100% - 20px);
+                width: calc(100% - 30px);
+                margin-top: 10px;
+                margin-left: 20px;
+                margin-right: 10px;
+                margin-bottom: 10px;
             }
             #navigatorview {
                 width: 100%;
@@ -53,7 +90,19 @@
         <div id="container">
             <div id="graphview"></div>
             <div id="textviews">
-                <div id="editorview"></div>
+                <div id="editorview">
+                    <div id="editorbar">
+                        <div id="editorpath">path > path</div>
+                    </div>
+                    <div id="editortitlebox">
+                        <div id="editortitle" contenteditable="true">TITLE</div>
+                    </div>
+                    <div id="editorcontentbox">
+                        <div id="editorcontent" contenteditable="true">
+                            Lorem Ipsum
+                        </div>
+                    </div>
+                </div>
                 <div id="navigatorview"></div>
             </div>
         </div>
