@@ -76,6 +76,8 @@
             // Specify the color scale.
             const color = d3.scaleOrdinal(d3.schemeCategory10);
 
+            // MIGRATE
+
             // The force simulation mutates links and nodes, so create a copy
             // so that re-evaluating this cell produces the same result.
             const links = data.links.map((d) => ({ ...d }));
@@ -124,6 +126,8 @@
             let primarynodeid = "cf0b19f251f438";
             let secondarynodeid = "1c0e0c501d58f8";
 
+            // MIGRATE
+
             function nodecolor(d) {
                 return d.id == primarynodeid ? "#000" : "#fff";
             }
@@ -146,7 +150,7 @@
             }
 
             function linkstrokewidth(d) {
-                return isselectedlink(d) ? 3 : 1;
+                return isselectedlink(d) ? 2 : 1;
             }
 
             function getneighbors(d) {
@@ -159,6 +163,8 @@
                     return neighbors;
                 }, []);
             }
+
+            // PARTIALLY MIGRATE
 
             // Add a line for each link, and a circle for each node.
             let link = svg
@@ -181,7 +187,9 @@
                 .attr("stroke-width", 1.5)
                 .attr("fill", (d) => color(d.group));
 
-            node.append("title").text((d) => d.id); // NOTE: Title added here
+            node.append("title").text((d) => d.title); // NOTE: Title added here
+
+            // PARTIALLY MIGRATE
 
             // graphwalk
             addEventListener("keydown", (event) => {
@@ -189,7 +197,7 @@
                     const temp = primarynodeid;
                     primarynodeid = secondarynodeid;
                     secondarynodeid = temp;
-                } else if (event.code == "KeyJ") {
+                } else if (event.code == "KeyD") {
                     const neighbors = getneighbors(primarynodeid);
 
                     const index = neighbors.indexOf(secondarynodeid);
@@ -198,6 +206,19 @@
                     } else {
                         secondarynodeid =
                             neighbors[(index + 1) % neighbors.length];
+                    }
+                } else if (event.code == "KeyA") {
+                    const neighbors = getneighbors(primarynodeid);
+
+                    const index = neighbors.indexOf(secondarynodeid);
+                    if (index == -1) {
+                        secondarynodeid = neighbors[0];
+                    } else {
+                        secondarynodeid =
+                            neighbors[
+                                (index - 1 + neighbors.lengthw) %
+                                    neighbors.length
+                            ];
                     }
                 } else if (event.code == "KeyW") {
                     const temp = primarynodeid;
@@ -212,6 +233,27 @@
                         secondarynodeid =
                             neighbors[(index + 1) % neighbors.length];
                     }
+                } else if (event.code == "KeyS") {
+                    const neighbors = getneighbors(primarynodeid);
+                    const index = neighbors.indexOf(secondarynodeid);
+                    if (index == -1) {
+                        console.log(
+                            "SOS index -1",
+                            primarynodeid,
+                            secondarynodeid,
+                            neighbors,
+                        );
+                        secondarynodeid = neighbors[0];
+                    } else {
+                        secondarynodeid =
+                            neighbors[
+                                (index - 1 + neighbors.length) %
+                                    neighbors.length
+                            ];
+                    }
+                    const temp = primarynodeid;
+                    primarynodeid = secondarynodeid;
+                    secondarynodeid = temp;
                 } else if (event.code == "KeyI") {
                     let newid = Math.random().toString(16).slice(2);
                     let a = node.data();
@@ -233,6 +275,15 @@
                     link = link
                         .data(b, (d) => `${d.source.id}\t${d.target.id}`)
                         .join("line");
+                } else if (event.key == "1") {
+                    download(
+                        JSON.stringify({
+                            nodes: node.data(),
+                            links: link.data(),
+                        }),
+                        "json.txt",
+                        "text/plain",
+                    );
                 } else {
                     return;
                 }
@@ -244,6 +295,8 @@
                     .attr("stroke-width", (d) => linkstrokewidth(d))
                     .attr("stroke-opacity", 0.6);
             });
+
+            // MUST RUN ON NEW NODES: MIGRATE
 
             // Add a drag behavior.
             node.call(
@@ -285,11 +338,9 @@
                 event.subject.fy = null;
             }
 
-            // Append the SVG element.
-            graphview.append(svg.node());
-
             // Update graph with new data
             function updategraph({ newnodes, newlinks }) {
+                console.log({ newnodes, newlinks });
                 const old = new Map(node.data().map((d) => [d.id, d]));
                 newnodes = newnodes.map((d) =>
                     Object.assign(old.get(d.id) || {}, d),
@@ -302,12 +353,57 @@
 
                 node = node
                     .data(newnodes, (d) => d.id)
-                    .join((enter) => enter.append("circle").attr("r", 8));
+                    .join("circle")
+                    .attr("r", 5)
+                    .attr("stroke", (d) => nodecolor(d))
+                    .attr("stroke-opacity", (d) => nodestrokeopacity(d))
+                    .attr("stroke-width", 1.5)
+                    .attr("fill", (d) => color("A"));
+
+                node.call(
+                    d3
+                        .drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended),
+                );
 
                 link = link
                     .data(newlinks, (d) => `${d.source.id}\t${d.target.id}`)
-                    .join("line");
+                    .join("line")
+                    .attr("stroke", (d) => linkcolor(d))
+                    .attr("stroke-opacity", 0.6)
+                    .attr("stroke-width", (d) => linkstrokewidth(d));
             }
+
+            // Download & Upload
+            function download(content, fileName, contentType) {
+                var a = document.createElement("a");
+                var file = new Blob([content], { type: contentType });
+                a.href = URL.createObjectURL(file);
+                a.download = fileName;
+                a.click();
+            }
+
+            addEventListener("dragover", function (event) {
+                event.preventDefault();
+            });
+
+            addEventListener("drop", (ev) => {
+                ev.preventDefault();
+                async function getDrop() {
+                    const text = await [...ev.dataTransfer.items][0]
+                        .getAsFile()
+                        .text();
+                    console.log(JSON.parse(text));
+                    const a = JSON.parse(text);
+                    updategraph({ newnodes: a.nodes, newlinks: a.links });
+                }
+                getDrop();
+            });
+
+            // Append the SVG element.
+            graphview.append(svg.node());
         </script>
     </body>
 </html>
