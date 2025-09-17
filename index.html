@@ -60,226 +60,228 @@
         <script type="module">
             import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-            // Set data
-            let data = {
-                nodes: [
-                    { id: "cf0b19f251f438", title: "Idea 1", group: "A" }, // Math.random().toString(16).slice(2)
-                    { id: "1c0e0c501d58f8", title: "Idea 2", group: "B" },
-                ],
-                links: [{ source: "cf0b19f251f438", target: "1c0e0c501d58f8" }],
-            };
+            // Globals
+            let simulatednodes = [
+                { id: "cf0b19f251f438", title: "Idea 1", group: "A" }, // Math.random().toString(16).slice(2)
+                { id: "1c0e0c501d58f8", title: "Idea 2", group: "B" },
+            ];
+            let simulatedlinks = [
+                { source: "cf0b19f251f438", target: "1c0e0c501d58f8" },
+            ];
 
-            // Specify the dimensions of the chart.
-            const width = graphview.offsetWidth;
-            const height = graphview.offsetHeight;
-
-            // Specify the color scale.
-            const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-            // MIGRATE
-
-            // The force simulation mutates links and nodes, so create a copy
-            // so that re-evaluating this cell produces the same result.
-            const links = data.links.map((d) => ({ ...d }));
-            const nodes = data.nodes.map((d) => ({ ...d }));
-
-            // Create a simulation with several forces.
-            const simulation = d3
-                .forceSimulation(nodes)
-                .force(
-                    "link",
-                    d3
-                        .forceLink(links)
-                        .id((d) => d.id)
-                        .strength((d) => 1),
-                )
-                .force("charge", d3.forceManyBody());
-            // .force("x", d3.forceX())
-            // .force("y", d3.forceY());
-
-            // Create the SVG container.
-            const svg = d3
-                .create("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .attr("viewBox", [-width / 2, -height / 2, width, height])
-                .attr("style", "max-width: 100%; height: auto;");
-
-            // Add zoom behavior to svg
-            svg.call(
-                d3
-                    .zoom()
-                    .extent([
-                        [0, 0],
-                        [width, height],
-                    ])
-                    .scaleExtent([1, 8])
-                    .on("zoom", zoomed),
-            );
-
-            function zoomed({ transform }) {
-                link.attr("transform", transform);
-                node.attr("transform", transform);
-            }
-
-            // Control functions
             let primarynodeid = "cf0b19f251f438";
             let secondarynodeid = "1c0e0c501d58f8";
 
-            // MIGRATE
+            const chartwidth = graphview.offsetWidth;
+            const chartheight = graphview.offsetHeight;
 
-            function nodecolor(d) {
-                return d.id == primarynodeid ? "#000" : "#fff";
+            const simulation = d3
+                .forceSimulation(simulatednodes)
+                .force(
+                    "link",
+                    d3
+                        .forceLink(simulatedlinks)
+                        .id((link) => link.id)
+                        .strength((link) => 1),
+                )
+                .force("charge", d3.forceManyBody());
+
+            const svg = d3
+                .create("svg")
+                .attr("width", chartwidth)
+                .attr("height", chartheight)
+                .attr("viewBox", [
+                    -chartwidth / 2,
+                    -chartheight / 2,
+                    chartwidth,
+                    chartheight,
+                ])
+                .attr("style", "max-width: 100%; height: auto;")
+                .call(
+                    d3
+                        .zoom()
+                        .extent([
+                            [0, 0],
+                            [chartwidth, chartheight],
+                        ])
+                        .scaleExtent([1, 8])
+                        .on("zoom", ({ transform }) => {
+                            graphlinks.attr("transform", transform);
+                            graphnodes.attr("transform", transform);
+                        }),
+                );
+
+            let graphlinks = svg
+                .append("g")
+                .selectAll("line")
+                .data(simulatedlinks)
+                .join("line");
+
+            let graphnodes = svg
+                .append("g")
+                .selectAll("circle")
+                .data(simulatednodes, (node) => node.id)
+                .join("circle");
+
+            simulation.on("tick", () => {
+                graphlinks
+                    .attr("x1", (link) => link.source.x)
+                    .attr("y1", (link) => link.source.y)
+                    .attr("x2", (link) => link.target.x)
+                    .attr("y2", (link) => link.target.y);
+
+                graphnodes
+                    .attr("cx", (node) => node.x)
+                    .attr("cy", (node) => node.y);
+            });
+
+            function updatenodestructure(nodes, links) {
+                simulation.nodes(nodes);
+                simulation.force("link").links(links);
+                simulation.alpha(1).restart();
+
+                graphnodes = graphnodes
+                    .data(nodes, (node) => node.id)
+                    .join((enter) => enter.append("circle"));
+
+                graphlinks = graphlinks
+                    .data(
+                        links,
+                        (link) => `${link.source.id}\t${link.target.id}`,
+                    )
+                    .join("line");
             }
 
-            function nodestrokeopacity(d) {
-                return d.id == primarynodeid ? 0.6 : 1;
-            }
-
-            function isselectedlink(d) {
-                return (
-                    (primarynodeid == d.source.id &&
-                        secondarynodeid == d.target.id) ||
-                    (primarynodeid == d.target.id &&
-                        secondarynodeid == d.source.id)
+            function nodestructureupdated() {
+                graphnodes.call(
+                    d3
+                        .drag()
+                        .on("start", (event) => {
+                            if (!event.active)
+                                simulation.alphaTarget(0.3).restart();
+                            event.subject.fx = event.subject.x;
+                            event.subject.fy = event.subject.y;
+                        })
+                        .on("drag", (event) => {
+                            event.subject.fx = event.x;
+                            event.subject.fy = event.y;
+                        })
+                        .on("end", (event) => {
+                            if (!event.active) simulation.alphaTarget(0);
+                            event.subject.fx = null;
+                            event.subject.fy = null;
+                        }),
                 );
             }
 
-            function linkcolor(d) {
-                return isselectedlink(d) ? "#000" : "#999";
+            function nodestrokecolor(node) {
+                return node.id == primarynodeid ? "#000" : "#fff";
             }
 
-            function linkstrokewidth(d) {
-                return isselectedlink(d) ? 2 : 1;
+            const nodecolorscale = d3.scaleOrdinal(d3.schemeCategory10);
+
+            function nodestrokeopacity(node) {
+                return node.id == primarynodeid ? 0.6 : 1;
             }
 
-            function getneighbors(d) {
-                return link.data().reduce((neighbors, l) => {
-                    if (l.target.id === d) {
-                        neighbors.push(l.source.id);
-                    } else if (l.source.id === d) {
-                        neighbors.push(l.target.id);
+            function isselectedlink(link) {
+                return (
+                    (primarynodeid == link.source.id &&
+                        secondarynodeid == link.target.id) ||
+                    (primarynodeid == link.target.id &&
+                        secondarynodeid == link.source.id)
+                );
+            }
+
+            function linkcolor(link) {
+                return isselectedlink(link) ? "#000" : "#999";
+            }
+
+            function linkstrokewidth(link) {
+                return isselectedlink(link) ? 2 : 1;
+            }
+
+            function nodestylingupdated() {
+                graphnodes
+                    .attr("r", 5)
+                    .attr("stroke", (node) => nodestrokecolor(node))
+                    .attr("stroke-opacity", (node) => nodestrokeopacity(node))
+                    .attr("stroke-width", 1.5)
+                    .attr("fill", (node) => nodecolorscale(node.group));
+                graphlinks
+                    .attr("stroke", (link) => linkcolor(link))
+                    .attr("stroke-opacity", 0.6)
+                    .attr("stroke-width", (link) => linkstrokewidth(link));
+            }
+
+            function getneighbors(nodeid) {
+                return graphlinks.data().reduce((neighbors, link) => {
+                    if (link.target.id === nodeid) {
+                        neighbors.push(link.source.id);
+                    } else if (link.source.id === nodeid) {
+                        neighbors.push(link.target.id);
                     }
                     return neighbors;
                 }, []);
             }
 
-            // PARTIALLY MIGRATE
-
-            // Add a line for each link, and a circle for each node.
-            let link = svg
-                .append("g")
-                .selectAll("line")
-                .data(links)
-                .join("line")
-                .attr("stroke", (d) => linkcolor(d))
-                .attr("stroke-opacity", 0.6)
-                .attr("stroke-width", (d) => linkstrokewidth(d));
-
-            let node = svg
-                .append("g")
-                .selectAll("circle")
-                .data(nodes)
-                .join("circle")
-                .attr("r", 5)
-                .attr("stroke", (d) => nodecolor(d))
-                .attr("stroke-opacity", (d) => nodestrokeopacity(d))
-                .attr("stroke-width", 1.5)
-                .attr("fill", (d) => color(d.group));
-
-            node.append("title").text((d) => d.title); // NOTE: Title added here
-
-            // PARTIALLY MIGRATE
+            function getnextneighborid(
+                step = 1,
+                targetnodeid = primarynodeid,
+                targetneighborid = secondarynodeid,
+            ) {
+                const neighbornodeids = getneighbors(targetnodeid);
+                if (neighbornodeids.length == 0) {
+                    alert("Neighbor search returned empty.");
+                }
+                const index = neighbornodeids.indexOf(targetneighborid);
+                if (index == -1) {
+                    return neighbornodeids[0];
+                } else {
+                    return neighbornodeids[
+                        (index + step + neighbornodeids.length) %
+                            neighbornodeids.length
+                    ];
+                }
+            }
 
             // graphwalk
             addEventListener("keydown", (event) => {
-                if (event.code == "Space") {
-                    const temp = primarynodeid;
-                    primarynodeid = secondarynodeid;
-                    secondarynodeid = temp;
-                } else if (event.code == "KeyD") {
-                    const neighbors = getneighbors(primarynodeid);
-
-                    const index = neighbors.indexOf(secondarynodeid);
-                    if (index == -1) {
-                        secondarynodeid = neighbors[0];
-                    } else {
-                        secondarynodeid =
-                            neighbors[(index + 1) % neighbors.length];
-                    }
+                if (event.code == "KeyD") {
+                    secondarynodeid = getnextneighborid();
                 } else if (event.code == "KeyA") {
-                    const neighbors = getneighbors(primarynodeid);
-
-                    const index = neighbors.indexOf(secondarynodeid);
-                    if (index == -1) {
-                        secondarynodeid = neighbors[0];
-                    } else {
-                        secondarynodeid =
-                            neighbors[
-                                (index - 1 + neighbors.lengthw) %
-                                    neighbors.length
-                            ];
-                    }
+                    secondarynodeid = getnextneighborid(-1);
                 } else if (event.code == "KeyW") {
                     const temp = primarynodeid;
                     primarynodeid = secondarynodeid;
                     secondarynodeid = temp;
-                    const neighbors = getneighbors(primarynodeid);
 
-                    const index = neighbors.indexOf(secondarynodeid);
-                    if (index == -1) {
-                        secondarynodeid = neighbors[0];
-                    } else {
-                        secondarynodeid =
-                            neighbors[(index + 1) % neighbors.length];
-                    }
+                    secondarynodeid = getnextneighborid();
                 } else if (event.code == "KeyS") {
-                    const neighbors = getneighbors(primarynodeid);
-                    const index = neighbors.indexOf(secondarynodeid);
-                    if (index == -1) {
-                        console.log(
-                            "SOS index -1",
-                            primarynodeid,
-                            secondarynodeid,
-                            neighbors,
-                        );
-                        secondarynodeid = neighbors[0];
-                    } else {
-                        secondarynodeid =
-                            neighbors[
-                                (index - 1 + neighbors.length) %
-                                    neighbors.length
-                            ];
-                    }
+                    secondarynodeid = getnextneighborid(-1);
+
                     const temp = primarynodeid;
                     primarynodeid = secondarynodeid;
                     secondarynodeid = temp;
                 } else if (event.code == "KeyI") {
-                    let newid = Math.random().toString(16).slice(2);
-                    let a = node.data();
-                    a.push({ id: newid, title: "", group: "D" }); // TODO fix group stuff?
-                    let b = link.data();
-                    b.push({ source: primarynodeid, target: newid });
+                    let newnodeid = Math.random().toString(16).slice(2);
+                    let oldnodesdata = graphnodes.data();
+                    oldnodesdata.push({ id: newnodeid, title: "", group: "" });
+                    let oldlinksdata = graphlinks.data();
+                    oldlinksdata.push({
+                        source: primarynodeid,
+                        target: newnodeid,
+                    });
                     secondarynodeid = primarynodeid;
-                    primarynodeid = newid;
+                    primarynodeid = newnodeid;
 
-                    simulation.nodes(a);
-                    simulation.force("link").links(b);
-                    simulation.alpha(1).restart();
-
-                    node = node
-                        .data(a, (d) => d.id)
-                        .join((enter) => enter.append("circle").attr("r", 5))
-                        .attr("fill", (d) => color(d.group));
-
-                    link = link
-                        .data(b, (d) => `${d.source.id}\t${d.target.id}`)
-                        .join("line");
+                    updatenodestructure(oldnodesdata, oldlinksdata);
+                    nodestructureupdated();
                 } else if (event.key == "1") {
                     download(
                         JSON.stringify({
-                            nodes: node.data(),
-                            links: link.data(),
+                            nodes: graphnodes.data(),
+                            links: graphlinks.data(),
                         }),
                         "json.txt",
                         "text/plain",
@@ -287,94 +289,9 @@
                 } else {
                     return;
                 }
-                node.attr("stroke", (d) => nodecolor(d)).attr(
-                    "stroke-opacity",
-                    (d) => nodestrokeopacity(d),
-                );
-                link.attr("stroke", (d) => linkcolor(d))
-                    .attr("stroke-width", (d) => linkstrokewidth(d))
-                    .attr("stroke-opacity", 0.6);
+
+                nodestylingupdated();
             });
-
-            // MUST RUN ON NEW NODES: MIGRATE
-
-            // Add a drag behavior.
-            node.call(
-                d3
-                    .drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended),
-            );
-
-            // Set the position attributes of links and nodes each time the simulation ticks.
-            simulation.on("tick", () => {
-                link.attr("x1", (d) => d.source.x)
-                    .attr("y1", (d) => d.source.y)
-                    .attr("x2", (d) => d.target.x)
-                    .attr("y2", (d) => d.target.y);
-
-                node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-            });
-
-            // Reheat the simulation when drag starts, and fix the subject position.
-            function dragstarted(event) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                event.subject.fx = event.subject.x;
-                event.subject.fy = event.subject.y;
-            }
-
-            // Update the subject (dragged node) position during drag.
-            function dragged(event) {
-                event.subject.fx = event.x;
-                event.subject.fy = event.y;
-            }
-
-            // Restore the target alpha so the simulation cools after dragging ends.
-            // Unfix the subject position now that it’s no longer being dragged.
-            function dragended(event) {
-                if (!event.active) simulation.alphaTarget(0);
-                event.subject.fx = null;
-                event.subject.fy = null;
-            }
-
-            // Update graph with new data
-            function updategraph({ newnodes, newlinks }) {
-                console.log({ newnodes, newlinks });
-                const old = new Map(node.data().map((d) => [d.id, d]));
-                newnodes = newnodes.map((d) =>
-                    Object.assign(old.get(d.id) || {}, d),
-                );
-                newlinks = newlinks.map((d) => Object.assign({}, d));
-
-                simulation.nodes(newnodes);
-                simulation.force("link").links(newlinks);
-                simulation.alpha(1).restart();
-
-                node = node
-                    .data(newnodes, (d) => d.id)
-                    .join("circle")
-                    .attr("r", 5)
-                    .attr("stroke", (d) => nodecolor(d))
-                    .attr("stroke-opacity", (d) => nodestrokeopacity(d))
-                    .attr("stroke-width", 1.5)
-                    .attr("fill", (d) => color("A"));
-
-                node.call(
-                    d3
-                        .drag()
-                        .on("start", dragstarted)
-                        .on("drag", dragged)
-                        .on("end", dragended),
-                );
-
-                link = link
-                    .data(newlinks, (d) => `${d.source.id}\t${d.target.id}`)
-                    .join("line")
-                    .attr("stroke", (d) => linkcolor(d))
-                    .attr("stroke-opacity", 0.6)
-                    .attr("stroke-width", (d) => linkstrokewidth(d));
-            }
 
             // Download & Upload
             function download(content, fileName, contentType) {
@@ -396,13 +313,17 @@
                         .getAsFile()
                         .text();
                     console.log(JSON.parse(text));
-                    const a = JSON.parse(text);
-                    updategraph({ newnodes: a.nodes, newlinks: a.links });
+                    const { nodes, links } = JSON.parse(text);
+                    updatenodestructure(nodes, links);
+                    nodestructureupdated();
+                    nodestylingupdated();
                 }
                 getDrop();
             });
 
-            // Append the SVG element.
+            // finalize initial graph and add to view
+            nodestructureupdated();
+            nodestylingupdated();
             graphview.append(svg.node());
         </script>
     </body>
