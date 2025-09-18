@@ -135,33 +135,13 @@
                     </div>
                     <div id="editorcontentbox">
                         <div id="editorcontent" contenteditable="true">
-                            Lorem Ipsum
-                            <span class="linkertext" onclick="editContent()"
-                                >hello</span
-                            >
-                            asdf
+                            Lorem Ipsum <span class="linkertext" value="SOMEID">hello</span> asdf
                         </div>
                     </div>
                 </div>
                 <div id="navigatorview"></div>
             </div>
         </div>
-        <script>
-            function editContent() {
-                const ec = document.getElementById("editorcontent");
-                const range = document.createRange();
-                const selection = window.getSelection();
-                const savepoint = selection.focusNode;
-
-                ec.textContent = "Lorem Ipsum";
-
-                range.setStart(savepoint, 0);
-                range.collapse(true);
-
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
-        </script>
         <script type="module">
             import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
@@ -371,6 +351,33 @@
                 }
             }
 
+            function selectionupdated() {
+                let selectednodedata = graphnodes
+                    .data()
+                    .filter((nodedata) => nodedata.id === primarynodeid)[0];
+
+                // selectednodedata.color = 2;
+
+                editorcontent.innerHTML = selectednodedata.content;
+                editortitle.textContent = selectednodedata.title;
+            }
+
+            editorcontent.addEventListener("input", (e) => {
+                editorupdated(editortitle.textContent, e.target.innerHTML);
+            });
+
+            editortitle.addEventListener("input", (e) => {
+                editorupdated(e.target.textContent, editorcontent.innerHTML);
+            });
+
+            function editorupdated(title, content) {
+              let selectednodedata = graphnodes
+                  .data()
+                  .filter((nodedata) => nodedata.id === primarynodeid)[0]
+              selectednodedata.content = content;
+              selectednodedata.title = title;
+            }
+
             // graphwalk
             addEventListener("keydown", (event) => {
                 if (event.code == "KeyD") {
@@ -394,9 +401,9 @@
                     let oldnodesdata = graphnodes.data();
                     oldnodesdata.push({
                         id: newnodeid,
-                        title: "",
+                        title: "INSERT TITLE",
                         color: "0",
-                        content: "",
+                        content: "Lorem Ipsum",
                         time: Date.now(),
                     });
                     let oldlinksdata = graphlinks.data();
@@ -421,7 +428,7 @@
                 } else {
                     return;
                 }
-
+                selectionupdated();
                 nodestylingupdated();
             });
 
@@ -452,6 +459,45 @@
                 }
                 getDrop();
             });
+
+            window.addEventListener('load', ()=>{
+              ['click','focusin'].forEach( event =>{
+                graphview.addEventListener(event, setactivegraphview);
+                editorview.addEventListener(event, setactiveeditorview);
+                navigatorview.addEventListener(event, setactivenavigatorview);
+              });
+
+              setactivegraphview();
+            });
+
+            function setactivegraphview() {
+              graphview.style.backgroundColor = "var(--bglight)";
+
+              editorview.style.backgroundColor = "var(--bgdark)";
+              navigatorview.style.backgroundColor = "var(--bgdark)";
+
+              activeview = graphview;
+            }
+
+            function setactiveeditorview() {
+              editorview.style.backgroundColor = "var(--bglight)";
+
+              navigatorview.style.backgroundColor = "var(--bgdark)";
+              graphview.style.backgroundColor = "var(--bgdark)";
+
+              activeview = editorview;
+            }
+
+            function setactivenavigatorview() {
+              navigatorview.style.backgroundColor = "var(--bglight)";
+
+              editorview.style.backgroundColor = "var(--bgdark)";
+              graphview.style.backgroundColor = "var(--bgdark)";
+
+              activeview = navigatorview;
+            }
+
+            let activeview = null;
 
             // finalize initial graph and add to view
             nodestructureupdated();
