@@ -659,10 +659,14 @@
 
                         updatenodestructure(oldnodesdata, oldlinksdata);
                         nodestructureupdated();
+                    } else if (event.code == "KeyQ") {
+                      let graphlinkdata = graphlinks.data();
+                      graphlinkdata = graphlinkdata.map(({source, target, strength}) => {return {'source':source.id, 'target': target.id, 'strength': strength}});
+                      console.log(graphlinkdata);
+                      download(JSON.stringify({graphnodedata: graphnodes.data(), graphlinkdata: graphlinkdata}), "nodetdata.json", "text/json");
                     } else {
                         return;
                     }
-
                     selectionupdated();
                     nodestylingupdated();
                 }
@@ -687,11 +691,13 @@
                     const text = await [...ev.dataTransfer.items][0]
                         .getAsFile()
                         .text();
-                    console.log(JSON.parse(text));
-                    const { nodes, links } = JSON.parse(text);
-                    // updatenodestructure(nodes, links);
-                    // nodestructureupdated();
-                    // nodestylingupdated();
+                    const { graphnodedata, graphlinkdata } = JSON.parse(text);
+                    updatenodestructure(graphnodedata, graphlinkdata);
+                    primarynodeid = graphnodes.data()[0].id;
+                    secondarynodeid = getnextneighborid();
+                    nodestructureupdated();
+                    nodestylingupdated();
+                    console.log(graphlinkdata);
                 }
                 getDrop();
             });
