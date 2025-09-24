@@ -345,7 +345,7 @@
                     .attr("cy", (node) => node.y);
             });
 
-            function updatenodestructure(nodes, links) {
+            function updatenodestructure(nodes, links) { //should be called updategraphstructure
                 simulation.nodes(nodes);
                 simulation.force("link").links(links).strength((link)=>link.strength);
                 simulation.alpha(1).restart();
@@ -387,6 +387,29 @@
             function nodeclicked(event) {
               primarynodeid = event.target.__data__.id;
               secondarynodeid = getnextneighborid();
+              selectionupdated();
+              nodestylingupdated();
+            }
+
+            editorlinkadd.addEventListener('click', editorlinkaddclicked)
+            function editorlinkaddclicked(event) {
+              let targettitle = window.prompt("Enter target node title: ");
+              let selectednodes = graphnodes
+                  .data()
+                  .filter((node) => node.title == targettitle);
+              if (selectednodes.length == 0) {
+                alert("Unmatched title");
+                return;
+              }
+              let oldlinksdata = graphlinks.data();
+              oldlinksdata.push({
+                  source: primarynodeid,
+                  target: selectednodes[0].id,
+                  strength: 1,
+              });
+
+              secondarynodeid = selectednodes[0].id;
+              updatenodestructure(graphnodes.data(), oldlinksdata);
               selectionupdated();
               nodestylingupdated();
             }
@@ -620,7 +643,7 @@
                         let oldnodesdata = graphnodes.data();
                         oldnodesdata.push({
                             id: newnodeid,
-                            title: "Untitled",
+                            title: newnodeid,
                             color: "0",
                             content: "",
                             time: Date.now(),
