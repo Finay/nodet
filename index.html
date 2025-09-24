@@ -94,14 +94,33 @@
                 height: 80%;
                 width: 100%;
             }
-
-            #editorlinkbox {
+            #editorlinkcontainer {
                 height: 25px;
-                width: calc(100% - 30px);
+                width: calc(100% - 50px);
                 margin-top: 10px;
                 margin-left: 20px;
                 margin-right: 10px;
                 margin-bottom: 10px;
+                display: flex;
+                justify-content: left;
+                align-items: center;
+            }
+            #editorlinkadd {
+                color: var(--borderdark);
+                margin: 0 4px;
+                font-size: 20px;
+                border-radius: 4px;
+                background: var(--bgdark);
+                height: 20px;
+                margin-bottom: 3px;
+                cursor: pointer;
+            }
+            #editorlinkadd:hover {
+                background: var(--borderdark);
+            }
+            #editorlinkbox {
+                height: 25px;
+                width: calc(100% - 30px);
                 overflow-x: scroll;
                 display: block;
                 white-space: nowrap;
@@ -115,10 +134,17 @@
                 color: var(--text);
                 border: 2px var(--blue) solid;
                 border-radius: 6px;
-                font-size: 12px;
+                font-size: 13px;
                 padding: 0 5px 0 5px ;
                 width: max-content;
                 display: inline;
+                margin-right: 2px;
+            }
+            .editorlink[data-relation='sim'] {
+                border: 2px var(--green) solid;
+            }
+            .editorlink[data-relation='vis'] {
+                border: 2px var(--blue) solid;
             }
             .editorlink:hover {
                 padding: 0 0 0 5px;
@@ -185,14 +211,30 @@
                         <div id="editortitle" contenteditable="true">TITLE</div>
                     </div>
                     <div id="editorcontentbox">
-                        <div id="editorlinkbox">
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
-                            <div data-relation="sim" data-nodeid="" class="editorlink">Cartesian Dualism<span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span></div>
+                        <div id="editorlinkcontainer">
+                            <div id="editorlinkadd">
+                                <svg width="20px" height="20px" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+
+                                <defs>
+
+                                <style>.cls-1{fill:none;stroke:#96a0a1;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style>
+
+                                </defs>
+
+                                <title/>
+
+                                <g id="plus">
+
+                                <line class="cls-1" x1="16" x2="16" y1="7" y2="25"/>
+
+                                <line class="cls-1" x1="7" x2="25" y1="16" y2="16"/>
+
+                                </g>
+
+                                </svg>
+                            </div>
+                            <div id="editorlinkbox">
+                            </div>
                         </div>
                         <div id="editorcontent" contenteditable="true">
                             Lorem Ipsum
@@ -230,7 +272,7 @@
                 },
             ];
             let simulatedlinks = [
-                { source: "cf0b19f251f438", target: "1c0e0c501d58f8" },
+                { source: "cf0b19f251f438", target: "1c0e0c501d58f8", strength: 1 },
             ];
 
             let primarynodeid = "cf0b19f251f438";
@@ -250,7 +292,9 @@
                         .id((link) => link.id)
                         .strength((link) => 1),
                 )
-                .force("charge", d3.forceManyBody());
+                .force("charge", d3.forceManyBody())
+                .force("x", d3.forceX().strength(0.01))
+                .force("y", d3.forceY().strength(0.01));
 
             const svg = d3
                 .create("svg")
@@ -303,7 +347,7 @@
 
             function updatenodestructure(nodes, links) {
                 simulation.nodes(nodes);
-                simulation.force("link").links(links);
+                simulation.force("link").links(links).strength((link)=>link.strength);
                 simulation.alpha(1).restart();
 
                 graphnodes = graphnodes
@@ -337,7 +381,14 @@
                             event.subject.fx = null;
                             event.subject.fy = null;
                         }),
-                );
+                ).on("click", nodeclicked);
+            }
+
+            function nodeclicked(event) {
+              primarynodeid = event.target.__data__.id;
+              secondarynodeid = getnextneighborid();
+              selectionupdated();
+              nodestylingupdated();
             }
 
             function nodestrokecolor(node) {
@@ -350,12 +401,12 @@
                 return node.id == primarynodeid ? 1 : 1;
             }
 
-            function isselectedlink(link) {
+            function isselectedlink(link, id1=primarynodeid, id2=secondarynodeid) {
                 return (
-                    (primarynodeid == link.source.id &&
-                        secondarynodeid == link.target.id) ||
-                    (primarynodeid == link.target.id &&
-                        secondarynodeid == link.source.id)
+                    (id1 == link.source.id &&
+                        id2 == link.target.id) ||
+                    (id1 == link.target.id &&
+                        id2 == link.source.id)
                 );
             }
 
@@ -387,11 +438,11 @@
                     .attr("stroke-width", (link) => linkstrokewidth(link));
             }
 
-            function getneighbors(nodeid) {
+            function getneighbors(nodeid, targetonly=false) {
                 return graphlinks.data().reduce((neighbors, link) => {
                     if (link.target.id === nodeid) {
                         neighbors.push(link.source.id);
-                    } else if (link.source.id === nodeid) {
+                    } else if (link.source.id === nodeid && !targetonly) {
                         neighbors.push(link.target.id);
                     }
                     return neighbors;
@@ -423,17 +474,62 @@
                     .data()
                     .filter((nodedata) => nodedata.id === primarynodeid)[0];
 
-                // selectednodedata.color = 2;
+                // <span class="editorlinkcycle">↑</span><span class="editorlinkdelete">&#x2715;</span>
 
+                editorlinkbox.innerHTML = "";
+                let neighborids = getneighbors(primarynodeid);
+                let childids = getneighbors(primarynodeid, true);
+                for (let i = 0; i < neighborids.length; i++) {
+                  let neighbornode = graphnodes
+                      .data()
+                      .filter((nodedata) => nodedata.id === neighborids[i])[0];
+                  let elem = document.createElement('div');
+                  elem.classList.add('editorlink');
+                  elem.innerText = neighbornode.title;
+                  elem.dataset.linktargetid = neighbornode.id;
+                  if (childids.includes(neighborids[i])) {
+                    elem.dataset.relation = 'vis';
+                  } else {
+                    elem.dataset.relation = 'sim';
+                  }
+                  let span1 = document.createElement('span');
+                  span1.classList.add('editorlinkcycle');
+                  span1.addEventListener("click", cyclelink);
+                  span1.innerText = '↑';
+                  let span2 = document.createElement('span');
+                  span2.classList.add('editorlinkdelete');
+                  span2.innerHTML = '&#x2715;';
+                  span2.addEventListener("click", deletelink);
+                  elem.appendChild(span1);
+                  elem.appendChild(span2);
+                  editorlinkbox.appendChild(elem);
+                }
                 formatteditorcontent(selectednodedata.content);
                 editortitle.textContent = selectednodedata.title;
+            }
+
+            function deletelink(event) {
+              let targeteditorlink = event.target.parentElement;
+              let linktargetid = targeteditorlink.dataset.linktargetid;
+              let oldlinksdata = graphlinks.data();
+              updatenodestructure(graphnodes.data(), oldlinksdata.filter((link)=>!isselectedlink(link, primarynodeid, linktargetid)));
+              targeteditorlink.remove();
+            }
+
+            function cyclelink(event) {
+              let targeteditorlink = event.target.parentElement;
+              let linktargetid = targeteditorlink.dataset.linktargetid;
+              let oldlinksdata = graphlinks.data();
+              let targetgraphlink = oldlinksdata.filter((link)=>isselectedlink(link, primarynodeid, linktargetid))[0];
+              targetgraphlink.strength = -(targetgraphlink.strength - 1);
+              updatenodestructure(graphnodes.data(), oldlinksdata);
             }
 
             function formatteditorcontent(inputcontent) {
               editorcontent.innerHTML = inputcontent;
             }
 
-            function getCursorPosition(parent, node, offset, stat) {
+            function getcursorposition(parent, node, offset, stat) {
                 if (stat.done) return stat;
 
                 let currentNode = null;
@@ -457,7 +553,7 @@
                 return stat;
             }
 
-            function setCursorPosition(parent, range, stat) {
+            function setcursorposition(parent, range, stat) {
                 if (stat.done) return range;
 
                 if (parent.childNodes.length == 0) {
@@ -524,7 +620,7 @@
                         let oldnodesdata = graphnodes.data();
                         oldnodesdata.push({
                             id: newnodeid,
-                            title: "",
+                            title: "Untitled",
                             color: "0",
                             content: "",
                             time: Date.now(),
@@ -533,6 +629,7 @@
                         oldlinksdata.push({
                             source: primarynodeid,
                             target: newnodeid,
+                            strength: 1,
                         });
                         secondarynodeid = primarynodeid;
                         primarynodeid = newnodeid;
