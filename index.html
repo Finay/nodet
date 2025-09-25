@@ -296,6 +296,8 @@
                 .force("x", d3.forceX().strength(0.01))
                 .force("y", d3.forceY().strength(0.01));
 
+            let zoomtransform = null;
+
             const svg = d3
                 .create("svg")
                 .attr("width", chartwidth)
@@ -314,8 +316,9 @@
                             [0, 0],
                             [chartwidth, chartheight],
                         ])
-                        .scaleExtent([1, 8])
+                        .scaleExtent([0.2, 8])
                         .on("zoom", ({ transform }) => {
+                            zoomtransform = transform;
                             graphlinks.attr("transform", transform);
                             graphnodes.attr("transform", transform);
                         }),
@@ -338,11 +341,16 @@
                     .attr("x1", (link) => link.source.x)
                     .attr("y1", (link) => link.source.y)
                     .attr("x2", (link) => link.target.x)
-                    .attr("y2", (link) => link.target.y);
+                    .attr("y2", (link) => link.target.y)
+                if (zoomtransform)
+                  graphlinks.attr("transform", zoomtransform);
 
                 graphnodes
                     .attr("cx", (node) => node.x)
-                    .attr("cy", (node) => node.y);
+                    .attr("cy", (node) => node.y)
+
+                if (zoomtransform)
+                  graphnodes.attr("transform", zoomtransform);
             });
 
             function updatenodestructure(nodes, links) { //should be called updategraphstructure
@@ -391,8 +399,8 @@
               nodestylingupdated();
             }
 
-            editorlinkadd.addEventListener('click', editorlinkaddclicked)
-            function editorlinkaddclicked(event) {
+            editorlinkadd.addEventListener('click', creategraphlink)
+            function creategraphlink() {
               let targettitle = window.prompt("Enter target node title: ");
               let selectednodes = graphnodes
                   .data()
@@ -415,7 +423,7 @@
             }
 
             function nodestrokecolor(node) {
-                return node.id == primarynodeid ? "#BEB4B0" : "#fcf6e5";
+                return node.id == primarynodeid ? "#64625D" : "#fcf6e5";
             }
 
             const nodecolorscale = ["#4689cc", "#8d9b31", "#cb4239"];
@@ -617,9 +625,15 @@
             // graphwalk
             addEventListener("keydown", (event) => {
                 if (activeview == editorview) {
-                    if (event.key == "`") {
-                        let selection = document.getSelection();
+                  if (event.code == "Escape") {
+                    event.preventDefault();
+                    if (window.getSelection().empty) {  // Chrome
+                        window.getSelection().empty();
+                      } else if (window.getSelection().removeAllRanges) {  // Firefox
+                        window.getSelection().removeAllRanges();
                     }
+                    setactivegraphview();
+                  }
                 }
                 if (activeview == graphview) {
                     if (event.code == "KeyD") {
@@ -664,6 +678,11 @@
                       graphlinkdata = graphlinkdata.map(({source, target, strength}) => {return {'source':source.id, 'target': target.id, 'strength': strength}});
                       console.log(graphlinkdata);
                       download(JSON.stringify({graphnodedata: graphnodes.data(), graphlinkdata: graphlinkdata}), "nodetdata.json", "text/json");
+                    } else if (event.code == "KeyL") {
+                      creategraphlink();
+                    } else if (event.code == "Space") {
+                      event.preventDefault();
+                      editortitle.focus();
                     } else {
                         return;
                     }
