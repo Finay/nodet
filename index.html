@@ -821,6 +821,11 @@
                 }
             });
 
+            addEventListener('beforeunload', (event) => {
+                event.preventDefault();
+                return confirm("Confirm refresh");
+            });
+
             // Download & Upload
             function download(content, fileName, contentType) {
                 var a = document.createElement("a");
