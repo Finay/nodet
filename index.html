@@ -204,6 +204,11 @@
                 overflow-y: scroll;
                 overflow-x: hidden;
                 color: var(--text);
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
+            #editorcontent::-webkit-scrollbar {
+              display: none;
             }
             #navigatorview {
                 width: 100%;
@@ -222,6 +227,11 @@
                 color: var(--text);
                 margin-left: 20px;
                 margin-right: 15px;
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
+            #navresults::-webkit-scrollbar {
+              display: none;
             }
             #navresults tbody {
                 width: 100%;
@@ -282,6 +292,12 @@
                 width: 78%;
                 white-space: nowrap;
                 overflow: scroll;
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
+            .resulttitle::-webkit-scrollbar {
+              display: none;
+            }
             }
             .resultlink {
                 display: flex;
