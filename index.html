@@ -270,10 +270,7 @@
                 display: none;
             }
             .resultdot {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 0 10px 0 4px;
+                width: 20px;
             }
             .dot {
               height: 12px;
@@ -289,7 +286,7 @@
                 outline: 2.5px #64625D dashed;
             }
             .resulttitle {
-                width: 78%;
+                width: 80%;
                 white-space: nowrap;
                 overflow: scroll;
                 -ms-overflow-style: none;  /* IE and Edge */
@@ -611,7 +608,7 @@
                 return node.id == primarynodeid ? "#64625D" : "#fcf6e5";
             }
 
-            const nodecolorscale = ["#4689cc", "#8d9b31", "#cb4239"];
+            const nodecolorscale = ["#4689cc", "#8d9b31", "#cb4239", "#4E9A93", "#C24480", "#AE8B2D"];
 
             function nodestrokeopacity(node) {
                 return node.id == primarynodeid ? 1 : 1;
