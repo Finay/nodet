@@ -1052,7 +1052,7 @@
                 var status = xhr.status;
                 if (status === 200) {
                   console.log(xhr.response);
-                  const graphnodedata, graphlinkdata = JSON.parse(xhr.response);
+                  const { graphnodedata, graphlinkdata } = xhr.response;
                   updatenodestructure(graphnodedata, graphlinkdata);
                   primarynodeid = graphnodes.data()[0].id;
                   secondarynodeid = getnextneighborid();
