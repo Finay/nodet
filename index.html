@@ -1042,6 +1042,27 @@
             updateresults(graphnodes.data());
             navsearchbar.textContent = "";
             graphview.append(svg.node());
+
+            var loc = window.location.search.split('?p=');
+            if (loc.length > 0) {
+              var xhr = new XMLHttpRequest();
+              xhr.open('GET', './notes/'+loc[1], true);
+              xhr.responseType = 'json';
+              xhr.onload = function() {
+                var status = xhr.status;
+                if (status === 200) {
+                  const { graphnodedata, graphlinkdata } = JSON.parse(xhr.response);
+                  updatenodestructure(graphnodedata, graphlinkdata);
+                  primarynodeid = graphnodes.data()[0].id;
+                  secondarynodeid = getnextneighborid();
+                  nodestructureupdated();
+                  nodestylingupdated();
+                } else {
+                  console.log(xhr.response);
+                };
+              }
+              xhr.send();
+            }
         </script>
     </body>
 </html>
